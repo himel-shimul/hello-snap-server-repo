@@ -26,6 +26,8 @@ const client = new MongoClient(uri, {
 async function run(){
     try{
         const allPostCollections = client.db('helloSnap').collection('allPosts');
+        const allCommentCollections = client.db('helloSnap').collection('allComments');
+        const allUsersCollections = client.db('helloSnap').collection('allUsers');
 
         app.post('/allPosts', async (req, res) =>{
             const post = req.body;
@@ -43,19 +45,67 @@ async function run(){
           const post = await allPostCollections.findOne(query);
           res.send(post);
         })
-        app.put('/comment/:id', async (req, res) =>{
-          const id = req.params.id;
-          const mes = req.body;
-          const filter = {_id: ObjectId(id)};
-          const option = {upsert: true};
-          const updatedDoc ={
-            $set:{
-              comment: mes.message
-            }
-          }
-          const result = await allPostCollections.updateOne (filter, updatedDoc, option);
+
+        app.post('/allComments', async (req, res) =>{
+          const comment = req.body;
+          const result = await allCommentCollections.insertOne(comment);
           res.send(result);
         })
+        app.post('/addUserInfo', async (req, res) =>{
+          const user = req.body;
+          const result = await allUsersCollections.insertOne(user);
+          res.send(result);
+        })
+        app.get('/allUsers', async (req, res) => {
+          const query = {};
+          const options = await allUsersCollections.find(query).toArray();
+          res.send(options);
+      })
+      app.get('/allUsers/:email', async (req, res) =>{
+        const userEmail = req.params.email;
+        const query = {email: userEmail};
+        console.log( query, userEmail);
+        const currentUser = await allUsersCollections.findOne(query);
+        res.send(currentUser);
+      })
+      app.patch('/allUsers/:email', async (req, res) =>{
+        const userEmail = req.params.email;
+        const data = req.body.userProfile;
+        const filter = {email: userEmail};
+        const updateRev = {
+          $set: {
+              ...data
+          }
+      }
+      const result = await allUsersCollections.updateOne(filter, updateRev);
+      res.send(result);
+      })
+
+        app.get('/allComments', async (req, res) =>{
+          let query = {};
+          if(req.query.postId){
+            query ={
+              postId: req.query.postId
+            }
+          }
+          const cursor = allCommentCollections.find(query);
+          const comments = await cursor.toArray();
+          res.send(comments);
+        })
+
+        // app.put('/comment/:id', async (req, res) =>{
+        //   const id = req.params.id;
+        //   const mes = req.body;
+        //   const filter = {_id: ObjectId(id)};
+        //   const option = {upsert: true};
+        //   const updatedDoc ={
+        //     $set:{
+        //       comment: mes.message
+        //     }
+        //   }
+        //   const result = await allPostCollections.updateOne (filter, updatedDoc, option);
+        //   res.send(result);
+        // })
     }
     finally{
 
